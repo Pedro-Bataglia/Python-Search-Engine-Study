@@ -74,7 +74,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 vectorizer = TfidfVectorizer(tokenizer=tokenize_and_stem, stop_words='english')
 vectorizer.fit(docs)
 
-vectorizer.vocabulary__
+vectorizer.vocabulary_
 {'ai': 0,
  'ani': 1,
  'artifici': 2,
@@ -126,4 +126,59 @@ most_relevant_doc = docs[ranks[0]]
 most_relevant_doc
 
 'Content information. Email [martin davtyan at filement dot ai] if you have any questions'
+
+feedback = { 
+    'who makes chatbots': [(2,0.), (0,1.), (1,1.), (0,1.)],
+    'about page': [(0,1.)]
+}
+
+similarity = cosine_similarity(vectorizer.transform(['who makes chatbots']), doc_vectors)
+ranks = (-similarity).argsort(axis=None)
+docs[ranks[0]]
+
+'Filament Chat. A Framework for building and maintaining a scalable chatbot capacibility'
+
+import numpy as np
+
+query = 'who is making chatbots information'
+feedback_queries = list(feedback.keys())
+
+similarity = cosine_similarity(vectorizer.transform([query]),
+                               vectorizer.transform(feedback_queries))
+similarity
+
+array([[0.70710678, 0.        ]])
+
+max_idx = np.argmax(similarity)
+feedback_queries[max_idx]
+
+'who makes chatbots'
+
+pos_feedback_doc_idx = [idx for idx, feedback_value
+                        in feedback[feedback_queries[max_idx]]
+                        if feedback_value == 1.]
+pos_feedback_doc_idx
+
+[0, 1, 0]
+
+from collections import Counter
+
+counts = Counter(pos_feedback_doc_idx)
+counts
+
+Counter({0: 2, 1: 1})
+
+pos_feedback_proportions = { 
+    doc_idx: count / sum(counts.values()) for doc_idx, count in counts.items()
+}
+pos_feedback_proportions
+
+{0: 0.6666666666666666, 1: 0.3333333333333333}
+
+nn_similarity = np.max(similarity)
+pos_feedback_feature = [nn_similarity * pos_feedback_proportions.get(idx, 0)
+                        for idx, in enumerate(docs)]
+pos_feedback_feature
+
+[0.4714045207910317, 0.23570226039551584, 0.0]
 
