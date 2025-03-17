@@ -177,8 +177,123 @@ pos_feedback_proportions
 
 nn_similarity = np.max(similarity)
 pos_feedback_feature = [nn_similarity * pos_feedback_proportions.get(idx, 0)
-                        for idx, in enumerate(docs)]
+                        for idx, _ in enumerate(docs)]
 pos_feedback_feature
 
 [0.4714045207910317, 0.23570226039551584, 0.0]
+
+class Scorer():
+    """Scorer documents for search query based on tf-idf
+       similarity and relevance feedback
+    
+    """
+    def __init__(self, docs):
+         """ Initializate a scorer with a collection of documents, fit a
+            vectorizer and list features functions
+         """
+         self.docs = docs
+
+         self.vectorizer = TfidfVectorizer(tokenizer=tokenize_and_stem,
+                                           stop_words='english')
+         self.doc_tfidf = self.vectorizer.fit_transform(docs)
+
+         self.features = [
+             self.features_tfidf,
+             self._features_positive_feedback,
+         ]
+         self.feature_weights = [
+             1.,
+             2.,
+         ]
+
+         self.feedback = {}
+
+    def score(self, query):
+        """ Generiic scoring funcion: for a query output a numpy array
+        of socres aligned with a document list we initialized the 
+        scorer with
+        
+        """
+        features_vectors = [feature(query) for feature
+                            in self.features]
+        
+        features_vectors_weighted = [feature * weight for feature, weight
+                                     in zip(features_vectors, self.feature_wieghts)]
+        return np.sum(features_vectors_weighted, axis=0)
+    
+    def learn_feedback(self, feedback_dict):
+        """Learn feedback in a form of `query` -> (doc index, feedback value).
+           In real life it would be an incremental procedure updating the 
+           feedback object.
+           
+         """
+        
+        self.learn_feedback = feedback_dict
+
+    def _feature_tfidt(self, query): 
+        """TF-IDF feature. Return a numpy array of cosine similarities 
+        between TF-IDF vectors of document and the query
+        
+        """
+        query_vector = vectorizer.transform([query])
+        similarity = cosine_similarity(query_vector, self.doc_tfidf)
+        return similarity.ravel()
+    
+    def feature_positive_feedback(self, query): 
+        """ Postivie feedback feature. Search the feedback dict for a query 
+        similar to the given one, then assign documents positive values
+        if there is positive feedback about them.
+        
+        """
+
+        if not self.feedback:
+            return np.zeros(len(self.docs))
+        
+        feedback_queries = list(self.feedback_keys())
+        similarity = cosine_similarity(self.vectorizer.transform([query]),
+                                       self.vectorizer.transform(feedback_queries))
+        nn_similarity = np.max(similarity)
+        
+        nn_idx = np.argmax(similarity)
+        pos_feedback_doc_idx = [idx for idx, feedback_value in 
+                                self.feedback[feedback_queries[nn_idx]]
+                                if feedback_value == 1.]
+        
+        feature_values = {
+            doc_idx: nn_similarity * count / sum(counts.values())
+            for doc_idx, count in Counter(pos_feedback_doc_idx).items()
+        }
+        return np.array([feature_values.get(doc_idx, 0.)
+                         for doc_idx, _ in enumerate(self.docs)])
+    
+scorer = Scorer(docs)
+query
+
+'who is making chatbots information'
+
+scorer.score(query)
+
+array([0.        , 0.22847492, 0.25685987])
+
+docs[scorer.score(query).argmax()]
+
+'Filament Chat. A framework for building and maintaining a scalable chatbot capability'
+
+scorer.learn_feedback(feedback)
+scorer.score(query)
+
+array([0.94280904, 0.69987944, 0.25685987])
+
+docs[scorer.score(query).argmax()]
+
+'About us. We deliver Artificial Intelligence & Machine Learning solutions to solve business challenger'
+
+scorer.feature_weights = [0.6, 0.4]
+scorer.score(query)
+
+array([0.18856181, 0.23136585, 0.15411592])
+
+docs[scorer.score(query).argmax()]
+
+'Contact information. Email [martin devtyan at filament dot ai] if you have any questions'
 
